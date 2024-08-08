@@ -18,6 +18,7 @@ using System.Xml.Linq;
 using System.Text;
 using ICSharpCode.Decompiler.TypeSystem.Implementation;
 using ICSharpCode.Decompiler.Documentation;
+using Newtonsoft.Json.Linq;
 
 namespace FuGetGallery
 {
@@ -564,7 +565,8 @@ namespace FuGetGallery
 
             public override void WriteInterpolatedText (string text)
             {
-                throw new NotImplementedException ();//TODO: Implement this
+                WriteIndent ();
+                WritePrimitiveHtml (text, w);
             }
         }
 
