@@ -6,6 +6,8 @@ using Mono.Cecil;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using ICSharpCode.Decompiler.Metadata;
+using System.Reflection.PortableExecutable;
 
 namespace FuGetGallery
 {
@@ -13,6 +15,7 @@ namespace FuGetGallery
     {
         readonly PackageTargetFramework framework;
         readonly Lazy<AssemblyDefinition> definition;
+        readonly Lazy<PEFile> peFile;
         readonly Lazy<ICSharpCode.Decompiler.CSharp.CSharpDecompiler> decompiler;
         readonly Lazy<ICSharpCode.Decompiler.CSharp.CSharpDecompiler> idecompiler;
         readonly ConcurrentDictionary<Tuple<TypeDefinition, string>, TypeDocumentation> typeDocs =
@@ -28,7 +31,8 @@ namespace FuGetGallery
         }
 
         public AssemblyDefinition Definition => definition.Value;
-        
+        public PEFile PEFile => peFile.Value;
+
         public bool IsBuildAssembly => ArchiveEntry.FullName.StartsWith ("build/", StringComparison.InvariantCultureIgnoreCase);
 
         public bool IsPublic => Definition.Modules.Any (m => m.Types.Any (t => t.IsPublic));
@@ -59,6 +63,21 @@ namespace FuGetGallery
                     return null;
                 }
             }, true);
+            peFile = new Lazy<PEFile> (() => {
+                try {
+                    var ms = new MemoryStream ((int)ArchiveEntry.Length);
+                    using (var es = entry.Open ()) {
+                        es.CopyTo (ms);
+                        ms.Position = 0;
+                    }
+                    return new PEFile (entry.FullName, ms);
+                }
+                catch (Exception ex) {
+                    Debug.WriteLine ("Failed to load pe file");
+                    Debug.WriteLine (ex);
+                    return null;
+                }
+            }, true);
             format = ICSharpCode.Decompiler.CSharp.OutputVisitor.FormattingOptionsFactory.CreateMono();
             format.SpaceBeforeMethodCallParentheses = false;
             format.SpaceBeforeMethodDeclarationParentheses = false;
@@ -66,8 +85,8 @@ namespace FuGetGallery
             format.PropertyBraceStyle = ICSharpCode.Decompiler.CSharp.OutputVisitor.BraceStyle.EndOfLine;
             format.PropertyGetBraceStyle = ICSharpCode.Decompiler.CSharp.OutputVisitor.BraceStyle.EndOfLine;
             format.PropertySetBraceStyle = ICSharpCode.Decompiler.CSharp.OutputVisitor.BraceStyle.EndOfLine;
-            format.AutoPropertyFormatting = ICSharpCode.Decompiler.CSharp.OutputVisitor.PropertyFormatting.ForceOneLine;
-            format.SimplePropertyFormatting = ICSharpCode.Decompiler.CSharp.OutputVisitor.PropertyFormatting.ForceOneLine;
+            format.AutoPropertyFormatting = ICSharpCode.Decompiler.CSharp.OutputVisitor.PropertyFormatting.SingleLine;
+            format.SimplePropertyFormatting = ICSharpCode.Decompiler.CSharp.OutputVisitor.PropertyFormatting.SingleLine;
             format.IndentPropertyBody = false;
             format.IndexerDeclarationClosingBracketOnNewLine = ICSharpCode.Decompiler.CSharp.OutputVisitor.NewLinePlacement.SameLine;
             format.IndexerClosingBracketOnNewLine = ICSharpCode.Decompiler.CSharp.OutputVisitor.NewLinePlacement.SameLine;
@@ -75,10 +94,12 @@ namespace FuGetGallery
             format.NewLineAferIndexerOpenBracket = ICSharpCode.Decompiler.CSharp.OutputVisitor.NewLinePlacement.SameLine;
 
             idecompiler = new Lazy<ICSharpCode.Decompiler.CSharp.CSharpDecompiler> (() => {
-                var m = Definition?.MainModule;
+                var m = PEFile;
                 if (m == null)
                     return null;
-                return new ICSharpCode.Decompiler.CSharp.CSharpDecompiler (m, new ICSharpCode.Decompiler.DecompilerSettings {
+                var resolver = new UniversalAssemblyResolver (m.FileName, false, m.DetectTargetFrameworkId (), m.DetectRuntimePack (), PEStreamOptions.PrefetchMetadata, System.Reflection.Metadata.MetadataReaderOptions.ApplyWindowsRuntimeProjections);
+                return new ICSharpCode.Decompiler.CSharp.CSharpDecompiler (m, resolver, new ICSharpCode.Decompiler.DecompilerSettings {
+                    LoadInMemory = true,
                     ShowXmlDocumentation = false,
                     ThrowOnAssemblyResolveErrors = false,
                     AlwaysUseBraces = false,
@@ -89,10 +110,12 @@ namespace FuGetGallery
                 });
             }, true);
             decompiler = new Lazy<ICSharpCode.Decompiler.CSharp.CSharpDecompiler> (() => {
-                var m = Definition?.MainModule;
+                var m = PEFile;
                 if (m == null)
                     return null;
-                return new ICSharpCode.Decompiler.CSharp.CSharpDecompiler (m, new ICSharpCode.Decompiler.DecompilerSettings {
+                var resolver = new UniversalAssemblyResolver (m.FileName, false, m.DetectTargetFrameworkId (), m.DetectRuntimePack (), PEStreamOptions.PrefetchMetadata, System.Reflection.Metadata.MetadataReaderOptions.ApplyWindowsRuntimeProjections);
+                return new ICSharpCode.Decompiler.CSharp.CSharpDecompiler (m, resolver, new ICSharpCode.Decompiler.DecompilerSettings {
+                    LoadInMemory = true,
                     ShowXmlDocumentation = false,
                     ThrowOnAssemblyResolveErrors = false,
                     AlwaysUseBraces = false,

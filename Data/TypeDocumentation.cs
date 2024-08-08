@@ -399,52 +399,52 @@ namespace FuGetGallery
                 var u = n.Annotation<UsingScope> ();
                 if (u != null)
                     return "c-nr";
-                var m = n.Annotation<MemberResolveResult> ();
-                if (m != null) {
-                    if (m.Member.SymbolKind == SymbolKind.Method) {
-                        if (n is MethodDeclaration md) {
-                            if (md.GetSymbol () is DefaultResolvedMethod r)
-                                id = r.GetIdString ();
-                            return "c-md";
-                        }
-                        return "c-mr";
-                    }
-                    if (m.Member.SymbolKind == SymbolKind.Field) {
-                        if (n is FieldDeclaration fd) {
-                            if (fd.GetSymbol () is DefaultResolvedField r)
-                                id = r.GetIdString ();
-                            return "c-fd";
-                        }
-                        return "c-fr";
-                    }
-                    if (m.Member.SymbolKind == SymbolKind.Event) {
-                        if (n is EventDeclaration ed) {
-                            if (ed.GetSymbol () is DefaultResolvedEvent r)
-                                id = r.GetIdString ();
-                            return "c-ed";
-                        }
-                        if (n is CustomEventDeclaration ed2) {
-                            if (ed2.GetSymbol () is DefaultResolvedEvent r)
-                                id = r.GetIdString ();
-                            return "c-ed";
-                        }
-                        return "c-er";
-                    }
-                    if (m.Member.SymbolKind == SymbolKind.Constructor) {
-                        if (n is ConstructorDeclaration cd) {
-                            if (cd.GetSymbol () is DefaultResolvedEvent r)
-                                id = r.GetIdString ();
-                            return "c-cd";
-                        }
-                        return "c-cr";
-                    }
-                    if (n is PropertyDeclaration pd) {
-                        if (pd.GetSymbol () is DefaultResolvedProperty r)
-                            id = r.GetIdString ();
-                        return "c-pd";
-                    }
-                    return "c-pr";
-                }
+                var m = n.Annotation<MemberResolveResult> ();//TODO: Sometime I should figure out how to fix this
+                //if (m != null) {
+                //    if (m.Member.SymbolKind == SymbolKind.Method) {
+                //        if (n is MethodDeclaration md) {
+                //            if (md.GetSymbol () is DefaultResolvedMethod r)
+                //                id = r.GetIdString ();
+                //            return "c-md";
+                //        }
+                //        return "c-mr";
+                //    }
+                //    if (m.Member.SymbolKind == SymbolKind.Field) {
+                //        if (n is FieldDeclaration fd) {
+                //            if (fd.GetSymbol () is DefaultResolvedField r)
+                //                id = r.GetIdString ();
+                //            return "c-fd";
+                //        }
+                //        return "c-fr";
+                //    }
+                //    if (m.Member.SymbolKind == SymbolKind.Event) {
+                //        if (n is EventDeclaration ed) {
+                //            if (ed.GetSymbol () is DefaultResolvedEvent r)
+                //                id = r.GetIdString ();
+                //            return "c-ed";
+                //        }
+                //        if (n is CustomEventDeclaration ed2) {
+                //            if (ed2.GetSymbol () is DefaultResolvedEvent r)
+                //                id = r.GetIdString ();
+                //            return "c-ed";
+                //        }
+                //        return "c-er";
+                //    }
+                //    if (m.Member.SymbolKind == SymbolKind.Constructor) {
+                //        if (n is ConstructorDeclaration cd) {
+                //            if (cd.GetSymbol () is DefaultResolvedEvent r)
+                //                id = r.GetIdString ();
+                //            return "c-cd";
+                //        }
+                //        return "c-cr";
+                //    }
+                //    if (n is PropertyDeclaration pd) {
+                //        if (pd.GetSymbol () is DefaultResolvedProperty r)
+                //            id = r.GetIdString ();
+                //        return "c-pd";
+                //    }
+                //    return "c-pr";
+                //}
                 var mg = n.Annotation<MethodGroupResolveResult> ();
                 if (mg != null)
                     return "c-mr";
@@ -550,16 +550,21 @@ namespace FuGetGallery
                 w.Write("</span>");
             }
 
-            public override void WritePrimitiveValue (object value, string literalValue = null)
+            public override void WriteToken(Role role, string token)
+            {
+                WriteIndent ();
+                w.Write(token);
+            }
+
+            public override void WritePrimitiveValue (object value, LiteralFormat format = LiteralFormat.None)
             {
                 WriteIndent ();
                 WritePrimitiveHtml (value, w);
             }
 
-            public override void WriteToken(Role role, string token)
+            public override void WriteInterpolatedText (string text)
             {
-                WriteIndent ();
-                w.Write(token);
+                throw new NotImplementedException ();//TODO: Implement this
             }
         }
 
